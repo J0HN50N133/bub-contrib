@@ -4,7 +4,6 @@ from bub import hookimpl
 from bub.builtin.settings import RuntimeSettings
 from bub.channels import Channel
 from bub.types import Envelope, MessageHandler, State
-from republic import Tool
 
 from bub_schedule.jobstore import JSONJobStore
 
@@ -17,6 +16,8 @@ def default_scheduler() -> BaseScheduler:
 
 class ScheduleImpl:
     def __init__(self) -> None:
+        from bub_schedule import tools  # noqa: F401
+
         self.scheduler = default_scheduler()
 
     @hookimpl
@@ -28,12 +29,6 @@ class ScheduleImpl:
         from bub_schedule.channel import ScheduleChannel
 
         return [ScheduleChannel(self.scheduler)]
-
-    @hookimpl
-    def provide_tools(self) -> list[Tool]:
-        from bub_schedule.tools import schedule_tools
-
-        return schedule_tools()
 
 
 main = ScheduleImpl()

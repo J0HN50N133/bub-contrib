@@ -9,7 +9,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from bub import tool
 from pydantic import BaseModel, Field
-from republic import Tool, ToolContext
+from republic import ToolContext
 
 from bub_schedule.jobs import run_scheduled_reminder
 
@@ -109,7 +109,3 @@ def schedule_list(context: ToolContext) -> str:
         return "(no scheduled jobs)"
 
     return "\n".join(rows)
-
-
-def schedule_tools() -> list[Tool]:
-    return [schedule_add, schedule_remove, schedule_list]

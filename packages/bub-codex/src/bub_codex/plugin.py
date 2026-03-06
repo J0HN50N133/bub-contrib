@@ -1,15 +1,38 @@
 import asyncio
 import contextlib
-import importlib
+import json
 from pathlib import Path
-from typing import Generator, Literal
 
 from bub import hookimpl
 from bub.types import State
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-SandboxMode = Literal["read-only", "workspace-write", "danger-full-access"]
+from bub_codex.utils import with_bub_skills
+
+THREADS_FILE = ".bub-codex-threads.json"
+
+
+def _load_thread_id(session_id: str, state: State) -> str | None:
+    workpace = workspace_from_state(state)
+    threads_file = workpace / THREADS_FILE
+    with contextlib.suppress(FileNotFoundError):
+        with threads_file.open() as f:
+            threads = json.load(f)
+        return threads.get(session_id)
+
+
+def _save_thread_id(session_id: str, thread_id: str, state: State) -> None:
+    workpace = workspace_from_state(state)
+    threads_file = workpace / THREADS_FILE
+    if threads_file.exists():
+        with threads_file.open() as f:
+            threads = json.load(f)
+    else:
+        threads = {}
+    threads[session_id] = thread_id
+    with threads_file.open("w") as f:
+        json.dump(threads, f, indent=2)
 
 
 def workspace_from_state(state: State) -> Path:
@@ -32,58 +55,30 @@ class CodexSettings(BaseSettings):
 codex_settings = CodexSettings()
 
 
-def _copy_bub_skills(workspace: Path) -> list[Path]:
-    bub_skill_paths = importlib.import_module("bub_skills").__path__
-    workspace.joinpath(".agents/skills").mkdir(parents=True, exist_ok=True)
-    collected_symlinks: list[Path] = []
-    for skill_root in bub_skill_paths:
-        for skill_dir in Path(skill_root).iterdir():
-            if skill_dir.joinpath("SKILL.md").is_file():
-                symlink_path = workspace / ".agents/skills" / skill_dir.name
-                if not symlink_path.exists():
-                    symlink_path.symlink_to(skill_dir, target_is_directory=True)
-                    collected_symlinks.append(symlink_path)
-    return collected_symlinks
-
-
-@contextlib.contextmanager
-def with_bub_skills(workspace: Path) -> Generator[None, None, None]:
-    """Context manager to copy bub skills into the workspace."""
-    skills = _copy_bub_skills(workspace)
-    try:
-        yield
-    finally:
-        for skill in skills:
-            with contextlib.suppress(OSError):
-                skill.unlink()
-
-
 @hookimpl
 async def run_model(prompt: str, session_id: str, state: State) -> str:
     workspace = workspace_from_state(state)
-    command = [
-        "codex",
-        "e",
-        "resume",
-        session_id,
-    ]
+    thread_id = _load_thread_id(session_id, state)
+    command = ["codex", "e"]
+    if thread_id:
+        command.extend(["resume", thread_id])
     if codex_settings.model:
         command.extend(["--model", codex_settings.model])
     if codex_settings.yolo_mode:
         command.append("--dangerously-bypass-approvals-and-sandbox")
-    command.append("-")
+    command.append(prompt)
     with with_bub_skills(workspace):
         process = await asyncio.create_subprocess_exec(
             *command,
-            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             cwd=str(workspace),
         )
-        stdout, _ = await process.communicate(prompt.encode())
+        stdout, _ = await process.communicate()
     output_blocks: list[str] = []
     if stdout:
         output_blocks.append(stdout.decode())
-    if process.returncode != 0:
-        error_message = f"Codex process exited with code {process.returncode}."
-        output_blocks.append(error_message)
+        first_line = stdout.decode().splitlines()[0]
+        if "thread_id" in first_line:
+            thread_id = json.loads(first_line)["thread_id"]
+            _save_thread_id(session_id, thread_id, state)
     return "\n".join(output_blocks)

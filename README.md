@@ -4,6 +4,9 @@ Contrib packages for the `bub` ecosystem.
 
 ## Packages
 
+- `packages/bub-codex`
+  - Bub plugin entry point: `codex`
+  - Provides a `run_model` hook that delegates model execution to the Codex CLI.
 - `packages/bub-tg-feed`
   - Bub plugin entry point: `tg-feed`
   - Provides an AMQP-based channel adapter for Telegram feed messages.
@@ -18,6 +21,7 @@ Contrib packages for the `bub` ecosystem.
 
 ```text
 packages/
+  bub-codex/
   bub-tg-feed/
   bub-schedule/
   bub-discord/
@@ -40,6 +44,7 @@ Install contrib packages in editable mode:
 
 ```bash
 uv pip install -e packages/bub-tg-feed -e packages/bub-schedule -e packages/bub-discord
+uv pip install -e packages/bub-codex
 ```
 
 ## Runtime Notes
@@ -48,6 +53,11 @@ uv pip install -e packages/bub-tg-feed -e packages/bub-schedule -e packages/bub-
 
 - `AMQP_URL`: RabbitMQ/AMQP connection URL
 - `BUB_TELEGRAM_TOKEN`: Telegram bot token used for chat actions and bot metadata
+
+### `bub-codex` environment variables
+
+- `BUB_CODEX_MODEL`: Optional model name passed to Codex CLI (`--model`)
+- `BUB_CODEX_YOLO_MODE`: Optional boolean, enables `--dangerously-bypass-approvals-and-sandbox`
 
 ### `bub-schedule` persistence
 
