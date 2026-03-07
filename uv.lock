@@ -13,6 +13,7 @@ members = [
     "bub-contrib",
     "bub-discord",
     "bub-schedule",
+    "bub-tapestore-sqlite",
     "bub-tg-feed",
     "bub-web-search",
 ]
@@ -338,6 +339,7 @@ dependencies = [
     { name = "bub-codex" },
     { name = "bub-discord" },
     { name = "bub-schedule" },
+    { name = "bub-tapestore-sqlite" },
     { name = "bub-tg-feed" },
     { name = "bub-web-search" },
 ]
@@ -348,6 +350,7 @@ requires-dist = [
     { name = "bub-codex", editable = "packages/bub-codex" },
     { name = "bub-discord", editable = "packages/bub-discord" },
     { name = "bub-schedule", editable = "packages/bub-schedule" },
+    { name = "bub-tapestore-sqlite", editable = "packages/bub-tapestore-sqlite" },
     { name = "bub-tg-feed", editable = "packages/bub-tg-feed" },
     { name = "bub-web-search", editable = "packages/bub-web-search" },
 ]
@@ -381,6 +384,17 @@ requires-dist = [
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "bub", git = "https://github.com/bubbuild/bub.git" },
 ]
+
+[[package]]
+name = "bub-tapestore-sqlite"
+version = "0.1.0"
+source = { editable = "packages/bub-tapestore-sqlite" }
+dependencies = [
+    { name = "bub" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "bub", git = "https://github.com/bubbuild/bub.git" }]
 
 [[package]]
 name = "bub-tg-feed"
