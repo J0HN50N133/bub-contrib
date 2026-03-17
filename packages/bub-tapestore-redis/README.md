@@ -21,8 +21,15 @@ The plugin reads environment variables with prefix `BUB_TAPESTORE_REDIS_`:
 
 - `BUB_TAPESTORE_REDIS_URL` (optional)
   - Default: `redis://localhost:6379/0`
+  - Include authentication in the URL when Redis requires it:
+    - Password only: `redis://:password@localhost:6379/0`
+    - ACL username and password: `redis://username:password@localhost:6379/0`
+    - TLS: `rediss://username:password@host:6379/0`
 - `BUB_TAPESTORE_REDIS_KEY_PREFIX` (optional)
   - Default: `republic:tape`
+
+If the password contains reserved URL characters such as `@`, `:`, or `/`, it
+must be URL-encoded before putting it in `BUB_TAPESTORE_REDIS_URL`.
 
 ## Runtime Behavior
 
