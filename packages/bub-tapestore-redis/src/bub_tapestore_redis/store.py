@@ -10,12 +10,12 @@ from datetime import UTC, datetime, time
 from datetime import date as date_type
 from typing import Any
 
+import redis
+import redis.asyncio as redis_async
 from republic.core.errors import ErrorKind
 from republic.core.results import ErrorPayload
 from republic.tape.entries import TapeEntry
 from republic.tape.query import TapeQuery
-
-from .redis import AsyncRedisClient, SyncRedisClient
 
 DEFAULT_KEY_PREFIX = "republic:tape"
 _ANCHOR_SEPARATOR = ":"
@@ -147,7 +147,7 @@ def _anchor_arg(entry: TapeEntry) -> str:
     return f"{_encode_anchor_name(str(name))}{_ANCHOR_SEPARATOR}"
 
 
-def _scan_sync_anchor_ids(client: SyncRedisClient, key: str, pattern: str) -> list[int]:
+def _scan_sync_anchor_ids(client: redis.Redis, key: str, pattern: str) -> list[int]:
     cursor = 0
     ids: list[int] = []
     while True:
@@ -157,7 +157,7 @@ def _scan_sync_anchor_ids(client: SyncRedisClient, key: str, pattern: str) -> li
             return ids
 
 
-async def _scan_async_anchor_ids(client: AsyncRedisClient, key: str, pattern: str) -> list[int]:
+async def _scan_async_anchor_ids(client: redis_async.Redis, key: str, pattern: str) -> list[int]:
     cursor = 0
     ids: list[int] = []
     while True:
@@ -210,17 +210,17 @@ class _RedisKeyspace:
         return self._tape_key(tape, "anchors")
 
 
-def _last_anchor_id(client: SyncRedisClient, key: str) -> int:
+def _last_anchor_id(client: redis.Redis, key: str) -> int:
     values = client.zrevrange(key, 0, 0)
     return _parse_anchor_id(values[0]) if values else -1
 
 
-async def _async_last_anchor_id(client: AsyncRedisClient, key: str) -> int:
+async def _async_last_anchor_id(client: redis_async.Redis, key: str) -> int:
     values = await client.zrevrange(key, 0, 0)
     return _parse_anchor_id(values[0]) if values else -1
 
 
-def _resolve_sync_slice_bounds(client: SyncRedisClient, keys: _RedisKeyspace, query: TapeQuery[Any]) -> tuple[int, int]:
+def _resolve_sync_slice_bounds(client: redis.Redis, keys: _RedisKeyspace, query: TapeQuery[Any]) -> tuple[int, int]:
     if query._between_anchors is not None:
         start_name, end_name = query._between_anchors
         start_ids = _scan_sync_anchor_ids(client, keys.anchors(query.tape), _anchor_match_pattern(start_name))
@@ -250,7 +250,7 @@ def _resolve_sync_slice_bounds(client: SyncRedisClient, keys: _RedisKeyspace, qu
 
 
 async def _resolve_async_slice_bounds(
-    client: AsyncRedisClient,
+    client: redis_async.Redis,
     keys: _RedisKeyspace,
     query: TapeQuery[Any],
 ) -> tuple[int, int]:
@@ -285,7 +285,7 @@ async def _resolve_async_slice_bounds(
 class RedisTapeStore:
     """Sync TapeStore implementation backed by Redis."""
 
-    def __init__(self, client: SyncRedisClient, *, key_prefix: str = DEFAULT_KEY_PREFIX) -> None:
+    def __init__(self, client: redis.Redis, *, key_prefix: str = DEFAULT_KEY_PREFIX) -> None:
         self._client = client
         self._keys = _RedisKeyspace(key_prefix)
 
@@ -330,7 +330,7 @@ class RedisTapeStore:
 class AsyncRedisTapeStore:
     """Async TapeStore implementation backed by Redis."""
 
-    def __init__(self, client: AsyncRedisClient, *, key_prefix: str = DEFAULT_KEY_PREFIX) -> None:
+    def __init__(self, client: redis_async.Redis, *, key_prefix: str = DEFAULT_KEY_PREFIX) -> None:
         self._client = client
         self._keys = _RedisKeyspace(key_prefix)
 
