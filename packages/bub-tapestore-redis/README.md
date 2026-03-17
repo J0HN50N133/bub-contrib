@@ -1,0 +1,38 @@
+# bub-tapestore-redis
+
+Redis-backed tape store plugin for `bub`.
+
+## What It Provides
+
+- Bub plugin entry point: `tapestore-redis`
+- A `provide_tape_store` hook implementation backed by Redis
+- Exported `RedisTapeStore` and `AsyncRedisTapeStore` classes for direct use
+- Query behavior aligned with `republic` tape queries
+
+## Installation
+
+```bash
+uv pip install "git+https://github.com/bubbuild/bub-contrib.git#subdirectory=packages/bub-tapestore-redis"
+```
+
+## Configuration
+
+The plugin reads environment variables with prefix `BUB_TAPESTORE_REDIS_`:
+
+- `BUB_TAPESTORE_REDIS_URL` (optional)
+  - Default: `redis://localhost:6379/0`
+- `BUB_TAPESTORE_REDIS_KEY_PREFIX` (optional)
+  - Default: `republic:tape`
+
+## Runtime Behavior
+
+- The plugin overrides Bub's builtin file-based tape store through `provide_tape_store`.
+- The store keeps per-tape entry IDs monotonic with Redis-side atomic allocation.
+- Anchor queries use a Redis sorted set so `after_anchor`, `last_anchor`, and
+  `between_anchors` stay consistent with Bub/Republic expectations.
+- The package also exposes sync and async store classes for non-plugin usage.
+
+## Redis Notes
+
+- Callers own the Redis client lifecycle when using the store classes directly.
+- Tape-local Redis hash tags keep multi-key updates in a single cluster slot.
